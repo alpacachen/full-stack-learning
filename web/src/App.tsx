@@ -1,35 +1,27 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import viteLogo from "/vite.svg";
-import "./App.css";
-import { useAsync } from "react-use";
-import { baseGet } from "./utils/fetch";
+import { Col, Row } from "antd";
+import { Sidebar } from "./component/sidebar.tsx";
+import { Navigate, Route, Routes } from "react-router-dom";
+import { routes } from "./data/route.tsx";
+import { UserSessionProvider } from "./context/user-session.ts";
 
-function App() {
-	const [count, setCount] = useState(0);
-	const result = useAsync(() => baseGet("/test"), []);
-
+export const App = () => {
 	return (
-		<>
-			<div>
-				<a href="https://vite.dev" target="_blank">
-					<img src={viteLogo} className="logo" alt="Vite logo" />
-				</a>
-				<a href="https://react.dev" target="_blank">
-					<img src={reactLogo} className="logo react" alt="React logo" />
-				</a>
-			</div>
-			{result.value}
-			<h1>Vite + React + {result.value}</h1>
-			<div className="card">
-				<button onClick={() => setCount((count) => count + 1)}>count is {count}</button>
-				<p>
-					Edit <code>src/App.tsx</code> and save to test HMR
-				</p>
-			</div>
-			<p className="read-the-docs">Click on the Vite and React logos to learn more</p>
-		</>
+		<UserSessionProvider>
+			<Row className="h-full">
+				<Col span={4}>
+					<Sidebar />
+				</Col>
+				<Col span={20}>
+					<Routes>
+						<Route path="/" element={<Navigate to="/home" replace />} />
+						{routes.map((route) => (
+							<Route key={route.key} path={route.key as string} element={route.component} />
+						))}
+					</Routes>
+				</Col>
+			</Row>
+		</UserSessionProvider>
 	);
-}
+};
 
 export default App;
