@@ -1,9 +1,13 @@
 {
-    "$schema": "https://openapi.vercel.sh/vercel.json",
-    "rewrites": [
-      {
-        "source": "/api/:match*",
-        "destination": "https://full-stack-learning-cu9n.vercel.app/:match*"
-      }
-    ]
-  }
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/api/:match*",
+      "destination": "https://full-stack-learning-cu9n.vercel.app/:match*"
+    }
+  ]
+}
