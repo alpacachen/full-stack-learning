@@ -3,6 +3,7 @@ import { Sidebar } from "./component/sidebar.tsx";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { routes } from "./data/route.tsx";
 import { UserSessionProvider } from "./context/user-session.ts";
+import { AuthCallback } from "./pages/AuthCallback.tsx";
 
 export const App = () => {
 	return (
@@ -14,6 +15,7 @@ export const App = () => {
 				<Col span={20}>
 					<Routes>
 						<Route path="/" element={<Navigate to="/home" replace />} />
+						<Route path="/auth/callback" element={<AuthCallback />} />
 						{routes.map((route) => (
 							<Route key={route.key} path={route.key as string} element={route.component} />
 						))}
