@@ -16,9 +16,18 @@ export const baseGet = async (
   });
   return tryJson(response);
 };
-export const basePost = async (url: string, data: Record<string, unknown>) => {
+
+export const basePost = async (
+  url: string,
+  data: Record<string, unknown>,
+  headers: Record<string, string> = {}
+) => {
   const response = await fetch(`${baseUrl}${url}`, {
     method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...headers,
+    },
     body: JSON.stringify(data),
   });
   return tryJson(response);

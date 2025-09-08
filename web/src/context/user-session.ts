@@ -2,7 +2,7 @@ import type { Session } from "@supabase/supabase-js";
 import constate from "constate";
 import { useEffect, useState } from "react";
 import { getSession, onAuthStateChange } from "../utils/supbase";
-import { baseGet } from "../utils/fetch";
+import { baseGet, basePost } from "../utils/fetch";
 const useHook = () => {
   const [session, setSession] = useState<Session | null>(null);
   useEffect(() => {
@@ -20,8 +20,13 @@ const useHook = () => {
       Authorization: `Bearer ${session?.access_token}`,
     });
   };
+  const postWithAuth = async (url: string, data: Record<string, unknown>) => {
+    return await basePost(url, data, {
+      Authorization: `Bearer ${session?.access_token}`,
+    });
+  };
 
-  return { session, getWithAuth };
+  return { session, getWithAuth, postWithAuth };
 };
 
 export const [UserSessionProvider, useUserSession] = constate(useHook);
