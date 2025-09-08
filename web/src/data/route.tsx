@@ -1,6 +1,6 @@
 import { CodeSandboxOutlined } from "@ant-design/icons";
 import type { MenuItemType } from "antd/es/menu/interface";
-import OnlineRedis from "../pages/OnlineRedis";
+import { OnlineRedis } from "../pages/OnlineRedis";
 import OnlineMysql from "../pages/OnlineMysql";
 import Home from "../pages/Home";
 import JsonlToExcel from "../pages/JsonlToExcel";
