@@ -74,7 +74,7 @@ export class RedisService {
     return parts;
   }
 
-  async executeCommand(sessionId: string, command: string): Promise<any> {
+  async executeCommand(sessionId: string, command: string) {
     const instance = this.redisInstances.get(sessionId);
     if (!instance) {
       throw new Error('Redis实例不存在');
@@ -86,7 +86,7 @@ export class RedisService {
 
       return {
         success: true,
-        result: result,
+        result: result as unknown as string,
         command: command,
       };
     } catch (error: unknown) {
