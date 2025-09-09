@@ -9,20 +9,6 @@ interface RedisInstance {
   createdAt: Date;
 }
 
-interface RedisKeyValue {
-  key: string;
-  type: string;
-  value: any;
-}
-
-interface RedisDataResponse {
-  port: number;
-  keys: number;
-  keysList: string[];
-  keyValuePairs: RedisKeyValue[];
-  lastUpdated: Date;
-}
-
 @Injectable()
 export class RedisService {
   private redisInstances: Map<string, RedisInstance> = new Map();
@@ -56,6 +42,38 @@ export class RedisService {
     return port;
   }
 
+  private parseCommand(command: string): string[] {
+    const parts: string[] = [];
+    let current = '';
+    let inQuotes = false;
+    let quoteChar = '';
+
+    for (let i = 0; i < command.length; i++) {
+      const char = command[i];
+
+      if (!inQuotes && (char === '"' || char === "'")) {
+        inQuotes = true;
+        quoteChar = char;
+      } else if (inQuotes && char === quoteChar) {
+        inQuotes = false;
+        quoteChar = '';
+      } else if (!inQuotes && char === ' ') {
+        if (current.trim()) {
+          parts.push(current.trim());
+          current = '';
+        }
+      } else {
+        current += char;
+      }
+    }
+
+    if (current.trim()) {
+      parts.push(current.trim());
+    }
+
+    return parts;
+  }
+
   async executeCommand(sessionId: string, command: string): Promise<any> {
     const instance = this.redisInstances.get(sessionId);
     if (!instance) {
@@ -63,7 +81,7 @@ export class RedisService {
     }
 
     try {
-      const parts = command.trim().split(' ');
+      const parts = this.parseCommand(command.trim());
       const result = await instance.client.sendCommand(parts);
 
       return {
@@ -80,78 +98,30 @@ export class RedisService {
     }
   }
 
-  async getRedisData(sessionId: string): Promise<RedisDataResponse | null> {
+  async getRedisData(sessionId: string) {
     const instance = this.redisInstances.get(sessionId);
     if (!instance) {
       return null;
     }
 
-    try {
-      const keys = await instance.client.sendCommand(['KEYS', '*']);
-      const keysList = Array.isArray(keys) ? (keys as string[]) : [];
-
-      // 获取每个键的类型和值
-      const keyValuePairs: RedisKeyValue[] = [];
-
-      for (const key of keysList) {
-        try {
-          const type = (await instance.client.sendCommand([
-            'TYPE',
-            key,
-          ])) as string;
-          let value: any;
-
-          switch (type) {
-            case 'string':
-              value = await instance.client.sendCommand(['GET', key]);
-              break;
-            case 'list':
-              value = await instance.client.sendCommand([
-                'LRANGE',
-                key,
-                '0',
-                '-1',
-              ]);
-              break;
-            case 'set':
-              value = await instance.client.sendCommand(['SMEMBERS', key]);
-              break;
-            case 'hash':
-              value = await instance.client.sendCommand(['HGETALL', key]);
-              break;
-            case 'zset':
-              value = await instance.client.sendCommand([
-                'ZRANGE',
-                key,
-                '0',
-                '-1',
-                'WITHSCORES',
-              ]);
-              break;
-            default:
-              value = 'Unsupported type';
-          }
-
-          keyValuePairs.push({ key, type, value });
-        } catch (error) {
-          keyValuePairs.push({
-            key,
-            type: 'error',
-            value: 'Failed to get value',
-          });
-        }
-      }
-
-      return {
-        port: instance.port,
-        keys: keysList.length,
-        keysList: keysList,
-        keyValuePairs: keyValuePairs,
-        lastUpdated: new Date(),
-      };
-    } catch {
-      return null;
-    }
+    const keys = (await instance.client.sendCommand([
+      'KEYS',
+      '*',
+    ])) as unknown as string[];
+    const keysWithType = await Promise.all(
+      keys.map(async (key) => {
+        const type = (await instance.client.sendCommand([
+          'TYPE',
+          key,
+        ])) as unknown as string;
+        return { key, type };
+      }),
+    );
+    return {
+      keysWithType,
+      port: instance.port,
+      lastUpdated: new Date(),
+    };
   }
 
   async destroyRedisInstance(sessionId: string): Promise<void> {

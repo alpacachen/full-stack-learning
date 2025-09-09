@@ -1,8 +1,7 @@
-import { AuthGuard } from "../guard/auth-guard";
+import { UnderDevelopment } from "../component/under-development";
+
 export default function OnlineMysql() {
 	return (
-		<AuthGuard>
-			<div>在线 MySQL</div>
-		</AuthGuard>
+		<UnderDevelopment />
 	);
 }

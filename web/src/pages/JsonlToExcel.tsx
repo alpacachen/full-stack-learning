@@ -1,5 +1,9 @@
+import { UnderDevelopment } from "../component/under-development";
+
 export default function JsonlToExcel() {
-	return <div>JSONL 转 Excel</div>;
+	return (
+		<UnderDevelopment />
+	);
 }
 
 
