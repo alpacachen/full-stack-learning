@@ -3,7 +3,7 @@
   "rewrites": [
     {
       "source": "/api/:match*",
-      "destination": "https://full-stack-learning.onrender.com/:match*"
+      "destination": "https://full-stack-learning-server.vercel.app/:match*"
     },
     {
       "source": "/(.*)",
