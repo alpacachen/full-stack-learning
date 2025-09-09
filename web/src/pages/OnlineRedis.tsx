@@ -110,7 +110,7 @@ function InnerOnlineRedis() {
 
   // 初始化WebSocket连接
   useEffect(() => {
-    const newSocket = io('http://localhost:3000/online-redis');
+    const newSocket = io(`${import.meta.env.VITE_WS_DOMAIN}/online-redis`);
 
     newSocket.on('connect', () => {
       console.log('WebSocket连接成功');
