@@ -2,8 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Card, Button, Input, Spin, Typography, Space, Tag, Drawer, List, Flex, Row, Col } from 'antd';
 import { PlayCircleOutlined, ClearOutlined, QuestionCircleOutlined, CopyOutlined } from '@ant-design/icons';
 import { io } from 'socket.io-client';
-import { AuthGuard } from "../guard/auth-guard";
-import { useUserSession } from "../context/user-session";
+import { basePost } from '../utils/fetch';
 
 const { TextArea } = Input;
 const { Title, Text } = Typography;
@@ -98,7 +97,6 @@ const redisCommandExamples: RedisCommandExample[] = [
 ];
 
 function InnerOnlineRedis() {
-  const { postWithAuth } = useUserSession();
   const [isConnecting, setIsConnecting] = useState(true);
   const [redisPort, setRedisPort] = useState<number | null>(null);
   const [sessionId, setSessionId] = useState<string>('');
@@ -143,7 +141,7 @@ function InnerOnlineRedis() {
 
     setIsExecuting(true);
     try {
-      const result = await postWithAuth('/redis/execute', {
+      const result = await basePost('/redis/execute', {
         sessionId,
         command: command.trim(),
       });
@@ -155,7 +153,7 @@ function InnerOnlineRedis() {
     } finally {
       setIsExecuting(false);
     }
-  }, [command, sessionId, postWithAuth]);
+  }, [command, sessionId]);
 
   // 清空命令历史
   const clearHistory = () => {
@@ -378,8 +376,6 @@ function InnerOnlineRedis() {
 
 export const OnlineRedis = () => {
   return (
-    <AuthGuard>
-      <InnerOnlineRedis />
-    </AuthGuard>
+    <InnerOnlineRedis />
   );
 };

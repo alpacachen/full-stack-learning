@@ -11,9 +11,6 @@
   },
   "dependencies": {
     "@ant-design/icons": "5.x",
-    "@supabase/auth-ui-react": "^0.4.7",
-    "@supabase/auth-ui-shared": "^0.1.8",
-    "@supabase/supabase-js": "^2.57.2",
     "@tailwindcss/vite": "^4.1.13",
     "antd": "^5.27.3",
     "constate": "^3.3.3",
