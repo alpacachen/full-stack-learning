@@ -1,0 +1,14 @@
+{
+  "name": "full-stack-learning",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev:web": "cd web && pnpm dev",
+    "dev:server": "cd server && pnpm start:dev"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.14.0"
+}
