@@ -331,9 +331,9 @@ function InnerOnlineMysql() {
                         <div className="space-y-1">
                           {table.columns.map((column: any, index) => (
                             <div key={index} className="text-xs">
-                              <Tag size="small" color="green">{column.Field}</Tag>
+                              <Tag color="green">{column.Field}</Tag>
                               <span className="text-gray-500 ml-1">{column.Type}</span>
-                              {column.Key === 'PRI' && <Tag size="small" color="red" className="ml-1">主键</Tag>}
+                              {column.Key === 'PRI' && <Tag color="red" className="ml-1">主键</Tag>}
                             </div>
                           ))}
                         </div>
