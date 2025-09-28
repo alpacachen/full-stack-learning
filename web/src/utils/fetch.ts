@@ -32,14 +32,3 @@ export const basePost = async (
   });
   return tryJson(response);
 };
-
-export const baseDelete = async (
-  url: string,
-  headers: Record<string, string> = {}
-) => {
-  const response = await fetch(`${baseUrl}${url}`, {
-    method: "DELETE",
-    headers,
-  });
-  return tryJson(response);
-};

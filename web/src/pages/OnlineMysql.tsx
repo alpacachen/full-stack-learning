@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, Button, Input, Spin, Typography, Space, Tag, Drawer, List, Flex, Row, Col, Table } from 'antd';
 import { PlayCircleOutlined, ClearOutlined, QuestionCircleOutlined, CopyOutlined, ReloadOutlined } from '@ant-design/icons';
-import { basePost, baseGet, baseDelete } from '../utils/fetch';
+import { basePost, baseGet } from '../utils/fetch';
 
 const { TextArea } = Input;
 const { Title, Text } = Typography;
