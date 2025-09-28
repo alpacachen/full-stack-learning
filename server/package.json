@@ -60,7 +60,8 @@
     "typescript-eslint": "^8.20.0"
   },
   "redisMemoryServer": {
-    "version": "7.2.0"
+    "version": "7.4.0",
+    "debug": "1"
   },
   "jest": {
     "moduleFileExtensions": [

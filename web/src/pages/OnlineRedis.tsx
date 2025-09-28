@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, Button, Input, Spin, Typography, Space, Tag, Drawer, List, Flex, Row, Col } from 'antd';
-import { PlayCircleOutlined, ClearOutlined, QuestionCircleOutlined, CopyOutlined } from '@ant-design/icons';
-import { io } from 'socket.io-client';
-import { basePost } from '../utils/fetch';
+import { PlayCircleOutlined, ClearOutlined, QuestionCircleOutlined, CopyOutlined, ReloadOutlined } from '@ant-design/icons';
+import { basePost, baseGet, baseDelete } from '../utils/fetch';
 
 const { TextArea } = Input;
 const { Title, Text } = Typography;
@@ -106,34 +105,86 @@ function InnerOnlineRedis() {
   const [isExecuting, setIsExecuting] = useState(false);
   const [showCommandHelp, setShowCommandHelp] = useState(false);
 
-  // 初始化WebSocket连接
+  // 初始化Redis会话
   useEffect(() => {
-    const newSocket = io(`${import.meta.env.VITE_WS_DOMAIN}/online-redis`);
+    const initSession = async () => {
+      try {
+        const response = await basePost('/redis/create-session', {});
+        setSessionId(response.sessionId);
+        setRedisPort(response.port);
+        setIsConnecting(false);
 
-    newSocket.on('connect', () => {
-      console.log('WebSocket连接成功');
-      setSessionId(newSocket.id ?? '');
-    });
+        // 初始加载数据
+        fetchRedisData(response.sessionId);
+      } catch (error) {
+        console.error('创建Redis会话失败:', error);
+        setIsConnecting(false);
+      }
+    };
 
-    newSocket.on('redisReady', (data: { port: number; sessionId: string }) => {
-      console.log('Redis实例准备完成:', data);
-      setRedisPort(data.port);
-      setIsConnecting(false);
-    });
+    initSession();
 
-    newSocket.on('redisDataUpdate', (data: RedisData) => {
-      setRedisData(data);
-    });
+    // 页面卸载时清理会话
+    const cleanup = (currentSessionId: string) => {
+      if (currentSessionId) {
+        // 使用 navigator.sendBeacon 确保请求能发送成功
+        const url = '/api/redis/destroy-session';
+        const data = JSON.stringify({ sessionId: currentSessionId });
 
-    newSocket.on('error', (error: { message: string; error: string }) => {
-      console.error('Redis错误:', error);
-      setIsConnecting(false);
-    });
+        if (navigator.sendBeacon) {
+          // sendBeacon 需要 Blob 格式的数据
+          const blob = new Blob([data], { type: 'application/json' });
+          navigator.sendBeacon(url, blob);
+        } else {
+          // 备用方案：同步请求
+          const xhr = new XMLHttpRequest();
+          xhr.open('POST', url, false);
+          xhr.setRequestHeader('Content-Type', 'application/json');
+          xhr.send(data);
+        }
+      }
+    };
+
+    const handleBeforeUnload = () => {
+      if (sessionId) {
+        cleanup(sessionId);
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden' && sessionId) {
+        cleanup(sessionId);
+      }
+    };
+
+    // 监听页面卸载事件
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
-      newSocket.disconnect();
+      // 组件卸载时清理
+      if (sessionId) {
+        cleanup(sessionId);
+      }
+
+      // 移除事件监听器
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
+
+  // 获取Redis数据
+  const fetchRedisData = useCallback(async (targetSessionId?: string) => {
+    const currentSessionId = targetSessionId || sessionId;
+    if (!currentSessionId) return;
+
+    try {
+      const data = await baseGet(`/redis/data/${currentSessionId}`);
+      setRedisData(data);
+    } catch (error) {
+      console.error('获取Redis数据失败:', error);
+    }
+  }, [sessionId]);
 
   // 执行Redis命令
   const executeCommand = useCallback(async () => {
@@ -148,12 +199,15 @@ function InnerOnlineRedis() {
 
       setCommandHistory(prev => [result, ...prev]);
       setCommand('');
+
+      // 执行命令后自动刷新数据
+      await fetchRedisData();
     } catch (error) {
       console.error('执行命令失败:', error);
     } finally {
       setIsExecuting(false);
     }
-  }, [command, sessionId]);
+  }, [command, sessionId, fetchRedisData]);
 
   // 清空命令历史
   const clearHistory = () => {
@@ -243,6 +297,13 @@ function InnerOnlineRedis() {
               >
                 清空历史
               </Button>
+              <Button
+                icon={<ReloadOutlined />}
+                onClick={() => fetchRedisData()}
+                disabled={!sessionId}
+              >
+                刷新数据
+              </Button>
             </Space>
 
             {/* 命令执行历史 */}
@@ -305,8 +366,8 @@ function InnerOnlineRedis() {
         <div className="text-sm text-gray-600">
           <p>• 每个用户会获得一个独立的Redis实例，端口随机分配</p>
           <p>• 支持所有Redis原生命令，如：SET, GET, HSET, LPUSH等</p>
-          <p>• 数据实时同步，右侧面板每2秒自动更新</p>
-          <p>• 断开连接时Redis实例自动销毁</p>
+          <p>• 执行命令后自动刷新数据，也可点击"刷新数据"按钮手动更新</p>
+          <p>• 离开页面时Redis实例自动销毁</p>
         </div>
       </Card>
 

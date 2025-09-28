@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, Button, Input, Spin, Typography, Space, Tag, Drawer, List, Flex, Row, Col, Table } from 'antd';
-import { PlayCircleOutlined, ClearOutlined, QuestionCircleOutlined, CopyOutlined } from '@ant-design/icons';
-import { io } from 'socket.io-client';
-import { basePost } from '../utils/fetch';
+import { PlayCircleOutlined, ClearOutlined, QuestionCircleOutlined, CopyOutlined, ReloadOutlined } from '@ant-design/icons';
+import { basePost, baseGet, baseDelete } from '../utils/fetch';
 
 const { TextArea } = Input;
 const { Title, Text } = Typography;
@@ -95,34 +94,86 @@ function InnerOnlineMysql() {
   const [isExecuting, setIsExecuting] = useState(false);
   const [showCommandHelp, setShowCommandHelp] = useState(false);
 
-  // 初始化WebSocket连接
+  // 初始化MySQL会话
   useEffect(() => {
-    const newSocket = io(`${import.meta.env.VITE_WS_DOMAIN}/online-mysql`);
+    const initSession = async () => {
+      try {
+        const response = await basePost('/mysql/create-session', {});
+        setSessionId(response.sessionId);
+        setMysqlPort(response.port);
+        setIsConnecting(false);
 
-    newSocket.on('connect', () => {
-      console.log('WebSocket连接成功');
-      setSessionId(newSocket.id ?? '');
-    });
+        // 初始加载数据
+        fetchMySQLData(response.sessionId);
+      } catch (error) {
+        console.error('创建MySQL会话失败:', error);
+        setIsConnecting(false);
+      }
+    };
 
-    newSocket.on('mysqlReady', (data: { port: number; sessionId: string }) => {
-      console.log('MySQL实例准备完成:', data);
-      setMysqlPort(data.port);
-      setIsConnecting(false);
-    });
+    initSession();
 
-    newSocket.on('mysqlDataUpdate', (data: MySQLData) => {
-      setMysqlData(data);
-    });
+    // 页面卸载时清理会话
+    const cleanup = (currentSessionId: string) => {
+      if (currentSessionId) {
+        // 使用 navigator.sendBeacon 确保请求能发送成功
+        const url = '/api/mysql/destroy-session';
+        const data = JSON.stringify({ sessionId: currentSessionId });
 
-    newSocket.on('error', (error: { message: string; error: string }) => {
-      console.error('MySQL错误:', error);
-      setIsConnecting(false);
-    });
+        if (navigator.sendBeacon) {
+          // sendBeacon 需要 Blob 格式的数据
+          const blob = new Blob([data], { type: 'application/json' });
+          navigator.sendBeacon(url, blob);
+        } else {
+          // 备用方案：同步请求
+          const xhr = new XMLHttpRequest();
+          xhr.open('POST', url, false);
+          xhr.setRequestHeader('Content-Type', 'application/json');
+          xhr.send(data);
+        }
+      }
+    };
+
+    const handleBeforeUnload = () => {
+      if (sessionId) {
+        cleanup(sessionId);
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden' && sessionId) {
+        cleanup(sessionId);
+      }
+    };
+
+    // 监听页面卸载事件
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
-      newSocket.disconnect();
+      // 组件卸载时清理
+      if (sessionId) {
+        cleanup(sessionId);
+      }
+
+      // 移除事件监听器
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
+
+  // 获取MySQL数据
+  const fetchMySQLData = useCallback(async (targetSessionId?: string) => {
+    const currentSessionId = targetSessionId || sessionId;
+    if (!currentSessionId) return;
+
+    try {
+      const data = await baseGet(`/mysql/data/${currentSessionId}`);
+      setMysqlData(data);
+    } catch (error) {
+      console.error('获取MySQL数据失败:', error);
+    }
+  }, [sessionId]);
 
   // 执行MySQL查询
   const executeQuery = useCallback(async () => {
@@ -137,12 +188,15 @@ function InnerOnlineMysql() {
 
       setQueryHistory(prev => [result, ...prev]);
       setQuery('');
+
+      // 执行查询后自动刷新数据
+      await fetchMySQLData();
     } catch (error) {
       console.error('执行查询失败:', error);
     } finally {
       setIsExecuting(false);
     }
-  }, [query, sessionId]);
+  }, [query, sessionId, fetchMySQLData]);
 
   // 清空查询历史
   const clearHistory = () => {
@@ -286,6 +340,13 @@ function InnerOnlineMysql() {
               >
                 清空历史
               </Button>
+              <Button
+                icon={<ReloadOutlined />}
+                onClick={() => fetchMySQLData()}
+                disabled={!sessionId}
+              >
+                刷新数据
+              </Button>
             </Space>
 
             {/* 查询执行历史 */}
@@ -358,8 +419,8 @@ function InnerOnlineMysql() {
           <p>• 默认创建了 testdb 数据库，包含 users 和 products 示例表</p>
           <p>• 支持所有MySQL标准SQL语句：SELECT、INSERT、UPDATE、DELETE等</p>
           <p>• 使用 Ctrl+Enter (Windows) 或 Cmd+Enter (Mac) 快速执行查询</p>
-          <p>• 数据实时同步，右侧面板每3秒自动更新表结构</p>
-          <p>• 断开连接时MySQL实例自动销毁</p>
+          <p>• 执行查询后自动刷新数据，也可点击"刷新数据"按钮手动更新</p>
+          <p>• 离开页面时MySQL实例自动销毁</p>
         </div>
       </Card>
 

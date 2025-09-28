@@ -16,6 +16,28 @@ interface MySQLInstance {
 export class MySQLService {
   private mysqlInstances: Map<string, MySQLInstance> = new Map();
 
+  constructor() {
+    // 每10分钟清理一次超过30分钟未使用的实例
+    setInterval(
+      () => {
+        this.cleanupExpiredInstances();
+      },
+      10 * 60 * 1000,
+    );
+  }
+
+  private cleanupExpiredInstances() {
+    const now = new Date();
+    for (const [sessionId, instance] of this.mysqlInstances.entries()) {
+      const age = now.getTime() - instance.createdAt.getTime();
+      // 30分钟 = 30 * 60 * 1000毫秒
+      if (age > 30 * 60 * 1000) {
+        console.log(`自动清理过期MySQL实例: ${sessionId}`);
+        this.destroyMySQLInstance(sessionId);
+      }
+    }
+  }
+
   async createMySQLInstance(sessionId: string): Promise<number> {
     if (this.mysqlInstances.has(sessionId)) {
       await this.destroyMySQLInstance(sessionId);

@@ -13,6 +13,25 @@ interface RedisInstance {
 export class RedisService {
   private redisInstances: Map<string, RedisInstance> = new Map();
 
+  constructor() {
+    // 每10分钟清理一次超过30分钟未使用的实例
+    setInterval(() => {
+      this.cleanupExpiredInstances();
+    }, 10 * 60 * 1000);
+  }
+
+  private cleanupExpiredInstances() {
+    const now = new Date();
+    for (const [sessionId, instance] of this.redisInstances.entries()) {
+      const age = now.getTime() - instance.createdAt.getTime();
+      // 30分钟 = 30 * 60 * 1000毫秒
+      if (age > 30 * 60 * 1000) {
+        console.log(`自动清理过期Redis实例: ${sessionId}`);
+        this.destroyRedisInstance(sessionId);
+      }
+    }
+  }
+
   async createRedisInstance(sessionId: string): Promise<number> {
     if (this.redisInstances.has(sessionId)) {
       await this.destroyRedisInstance(sessionId);
